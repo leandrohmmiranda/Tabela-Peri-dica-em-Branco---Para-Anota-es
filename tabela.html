@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela Periódica em Branco - Para Anotações</title>
+    <!-- Incluindo a biblioteca html2canvas para gerar a imagem -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .periodic-table {
+            display: grid;
+            grid-template-columns: 50px repeat(18, 70px);
+            grid-template-rows: 40px repeat(7, 70px);
+            gap: 1px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        
+        .group-header, .period-header {
+            background-color: #999;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #666;
+        }
+        
+        .group-header {
+            width: 70px;
+            height: 40px;
+        }
+        
+        .period-header {
+            width: 50px;
+            height: 70px;
+        }
+        
+        .corner {
+            background-color: #999;
+            width: 50px;
+            height: 40px;
+        }
+        
+        .element {
+            width: 70px;
+            height: 70px;
+            border: 2px solid #333;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-sizing: border-box;
+        }
+        
+        .element textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            resize: none;
+            /* Fonte aumentada e em negrito */
+            font-size: 10px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 4px;
+            box-sizing: border-box;
+            background: transparent;
+            outline: none;
+            overflow: hidden;
+            line-height: 1.2;
+        }
+        
+        .element textarea:focus {
+            background-color: #eaf5ff;
+        }
+        
+        .bottom-section {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .lanthanides, .actinides {
+            display: grid;
+            grid-template-columns: 50px repeat(15, 70px);
+            gap: 1px;
+            justify-content: center;
+        }
+        
+        .lanthanide-header, .actinide-header {
+            width: 50px;
+            height: 70px;
+            background-color: #999;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #666;
+        }
+        
+        .empty {
+            visibility: hidden;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+        }
+        
+        .btn {
+            color: white;
+            padding: 12px 22px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn.clear { background-color: #f44336; }
+        .btn.save { background-color: #2196F3; }
+        .btn.load { background-color: #FF9800; }
+        .btn.image { background-color: #673AB7; } /* Cor para o novo botão */
+        
+        .info {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+        
+        .placeholder {
+            background-color: #ddd;
+            color: #666;
+        }
+        
+        .file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="captureArea">
+        <h1>Tabela Periódica em Branco - Para Anotações</h1>
+        
+        <div class="info">
+            Clique em qualquer célula para escrever suas anotações sobre os elementos químicos
+        </div>
+        
+        <!-- Botão "Salvar como Imagem" foi adicionado aqui -->
+        <div class="controls" id="controls">
+            <button class="btn image" onclick="saveAsImage()">Salvar como Imagem</button>
+            <button class="btn save" onclick="saveNotes()">Salvar Anotações (JSON)</button>
+            <button class="btn load" onclick="loadNotes()">Carregar Anotações (JSON)</button>
+            <button class="btn clear" onclick="clearAllNotes()">Limpar Tudo</button>
+            <input type="file" id="fileInput" class="file-input" accept=".json" onchange="loadNotesFromFile(event)">
+        </div>
+        
+        <div class="periodic-table" id="mainTable"></div>
+        
+        <div class="bottom-section">
+            <div class="lanthanides" id="lanthanides"></div>
+            <div class="actinides" id="actinides"></div>
+        </div>
+    </div>
+
+    <script>
+        // Posições dos elementos na tabela
+        const elementPositions = {
+            // Período 1
+            '1-1': 1, '1-18': 2,
+            // Período 2
+            '2-1': 3, '2-2': 4, '2-13': 5, '2-14': 6, '2-15': 7, '2-16': 8, '2-17': 9, '2-18': 10,
+            // Período 3
+            '3-1': 11, '3-2': 12, '3-13': 13, '3-14': 14, '3-15': 15, '3-16': 16, '3-17': 17, '3-18': 18,
+            // Período 4
+            '4-1': 19, '4-2': 20, '4-3': 21, '4-4': 22, '4-5': 23, '4-6': 24, '4-7': 25, '4-8': 26, '4-9': 27, '4-10': 28, '4-11': 29, '4-12': 30, '4-13': 31, '4-14': 32, '4-15': 33, '4-16': 34, '4-17': 35, '4-18': 36,
+            // Período 5
+            '5-1': 37, '5-2': 38, '5-3': 39, '5-4': 40, '5-5': 41, '5-6': 42, '5-7': 43, '5-8': 44, '5-9': 45, '5-10': 46, '5-11': 47, '5-12': 48, '5-13': 49, '5-14': 50, '5-15': 51, '5-16': 52, '5-17': 53, '5-18': 54,
+            // Período 6
+            '6-1': 55, '6-2': 56, '6-4': 72, '6-5': 73, '6-6': 74, '6-7': 75, '6-8': 76, '6-9': 77, '6-10': 78, '6-11': 79, '6-12': 80, '6-13': 81, '6-14': 82, '6-15': 83, '6-16': 84, '6-17': 85, '6-18': 86,
+            // Período 7
+            '7-1': 87, '7-2': 88, '7-4': 104, '7-5': 105, '7-6': 106, '7-7': 107, '7-8': 108, '7-9': 109, '7-10': 110, '7-11': 111, '7-12': 112, '7-13': 113, '7-14': 114, '7-15': 115, '7-16': 116, '7-17': 117, '7-18': 118
+        };
+
+        const lanthanideElements = [57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71];
+        const actinideElements = [89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103];
+
+        function createMainTable() {
+            const table = document.getElementById('mainTable');
+            
+            const corner = document.createElement('div');
+            corner.className = 'group-header corner';
+            table.appendChild(corner);
+            
+            for (let group = 1; group <= 18; group++) {
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'group-header';
+                groupHeader.textContent = group;
+                table.appendChild(groupHeader);
+            }
+            
+            for (let period = 1; period <= 7; period++) {
+                const periodHeader = document.createElement('div');
+                periodHeader.className = 'period-header';
+                periodHeader.textContent = period;
+                table.appendChild(periodHeader);
+                
+                for (let group = 1; group <= 18; group++) {
+                    const cell = document.createElement('div');
+                    const positionKey = `${period}-${group}`;
+                    
+                    if (elementPositions[positionKey]) {
+                        cell.className = 'element';
+                        const textarea = document.createElement('textarea');
+                        textarea.placeholder = `Elem. ${elementPositions[positionKey]}`;
+                        textarea.id = `element-${elementPositions[positionKey]}`;
+                        cell.appendChild(textarea);
+                    } else if ((period === 6 && group === 3) || (period === 7 && group === 3)) {
+                        cell.className = 'element placeholder';
+                        cell.innerHTML = `<div style="font-size: 14px; font-weight: bold;">${period === 6 ? '57-71' : '89-103'}</div>`;
+                    } else {
+                        cell.className = 'element empty';
+                    }
+                    
+                    table.appendChild(cell);
+                }
+            }
+        }
+
+        function createLanthanideActinideTable() {
+            const lanthanidesDiv = document.getElementById('lanthanides');
+            const actinidesDiv = document.getElementById('actinides');
+            
+            const lanthHeader = document.createElement('div');
+            lanthHeader.className = 'lanthanide-header';
+            lanthHeader.textContent = '6';
+            lanthanidesDiv.appendChild(lanthHeader);
+            
+            lanthanideElements.forEach(num => {
+                const cell = document.createElement('div');
+                cell.className = 'element';
+                const textarea = document.createElement('textarea');
+                textarea.placeholder = `Elem. ${num}`;
+                textarea.id = `element-${num}`;
+                cell.appendChild(textarea);
+                lanthanidesDiv.appendChild(cell);
+            });
+            
+            const actinHeader = document.createElement('div');
+            actinHeader.className = 'actinide-header';
+            actinHeader.textContent = '7';
+            actinidesDiv.appendChild(actinHeader);
+            
+            actinideElements.forEach(num => {
+                const cell = document.createElement('div');
+                cell.className = 'element';
+                const textarea = document.createElement('textarea');
+                textarea.placeholder = `Elem. ${num}`;
+                textarea.id = `element-${num}`;
+                cell.appendChild(textarea);
+                actinidesDiv.appendChild(cell);
+            });
+        }
+        
+        // ---- NOVA FUNÇÃO PARA SALVAR COMO IMAGEM ----
+        async function saveAsImage() {
+            const controls = document.getElementById('controls');
+            const captureArea = document.getElementById('captureArea');
+
+            // Remove o foco de qualquer elemento para não aparecer na imagem
+            if (document.activeElement) document.activeElement.blur();
+
+            // Esconde os botões temporariamente
+            controls.style.display = 'none';
+
+            try {
+                const canvas = await html2canvas(captureArea, {
+                    scale: 2, // Aumenta a resolução da imagem
+                    backgroundColor: '#f5f5f5', // Garante o fundo
+                    useCORS: true
+                });
+                
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'tabela_periodica_anotacoes.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+            } catch(error) {
+                console.error("Erro ao gerar a imagem:", error);
+                alert("Ocorreu um erro ao tentar salvar a imagem.");
+            } finally {
+                // Mostra os botões novamente, mesmo se der erro
+                controls.style.display = 'block';
+            }
+        }
+
+        function clearAllNotes() {
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.value = '';
+            });
+        }
+
+        function saveNotes() {
+            const notes = {};
+            const textareas = document.querySelectorAll('textarea');
+            
+            textareas.forEach(textarea => {
+                if (textarea.value.trim()) {
+                    notes[textarea.id] = textarea.value;
+                }
+            });
+            
+            const dataStr = JSON.stringify(notes, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'tabela_periodica_anotacoes.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadNotes() {
+            document.getElementById('fileInput').click();
+        }
+
+        function loadNotesFromFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const notes = JSON.parse(e.target.result);
+                        clearAllNotes();
+                        for (const elementId in notes) {
+                            const textarea = document.getElementById(elementId);
+                            if (textarea) {
+                                textarea.value = notes[elementId];
+                            }
+                        }
+                    } catch (error) {
+                        alert('Erro ao carregar o arquivo. Verifique se é um arquivo JSON válido.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Inicializar a tabela
+        createMainTable();
+        createLanthanideActinideTable();
+    </script>
+</body>
+</html>
